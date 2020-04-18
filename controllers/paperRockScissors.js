@@ -28,5 +28,6 @@ module.exports = {
             let reaction = victory ? "Yay!  Crushed you!" : tie ? "Oh well.  Can't cut the blade." : "Dang!  Cut me deep.";
             return msg.reply(`${myRoll}! ${reaction}`);
         }
+        return msg.reply("Valid commands are: paper, rock, and scissors.")
     }
 };

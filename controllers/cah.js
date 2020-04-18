@@ -251,7 +251,7 @@ module.exports = {
             case "hand":
                 return msg.author.send(reportHand(msg.author.id))
             default: 
-                return msg.reply(`Valid commands are: create, join, play, leave, games, players, hand, and score.`)
+                return msg.reply(`Valid commands are: create, join, play, leave, begin, select, games, game, and hand.`)
         }
     }
 }
