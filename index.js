@@ -15,7 +15,6 @@ for(let ind=0; ind<controllers.length; ind++){
     controllerMap[controller.triggers[cind]] = controller;
   }
 }
-console.log('controllerMap', controllerMap)
 
 client.on('ready', () => {
   client.user.setPresence({

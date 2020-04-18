@@ -26,7 +26,6 @@ for(let ind = 0; ind < cah.blackCards.length; ind++){
     }
     cah.blackCards[ind] = newCard
 }
-
 let createGame = (creatorId)=>{
     let blackDeck = new DeckBuilder()
     blackDeck.add(cah.blackCards)
@@ -62,19 +61,14 @@ let beginGame = (gameId)=>{
     for(let ind = 0; ind < gamesInPlayers[gameId].length; ind++){
         let playerId = gamesInPlayers[gameId][ind]
         let player = players[playerId]
-        player.hand = game.whites.draw(10)
+        game.whites.draw(10)
+        for(let ind = 1; ind<=10; ind++){
+            player.hand.push(game.whites.drawn[game.whites.drawn.length - ind])
+        }
     }
     game.czar = gamesInPlayers[gameId][Math.floor(Math.random()*Math.floor(gamesInPlayers[gameId].length))]
-    game.blackCard = game.blacks.draw(1)[0]
-}
-let selectCard = (playerId, cardId)=>{
-    let gameId = playersInGames[playerId]
-    let game = games[gameId]
-    if(players[playerId].selections.length < game.blackCard.pick){
-        players[playerId].selections.push(cardId)
-        return true
-    }
-    return false
+    game.blacks.draw(1)
+    game.blackCard = game.blacks.drawn[game.blacks.drawn.length-1]
 }
 let readyToFlip = (gameId)=>{
     let game = games[gameId]
@@ -86,39 +80,13 @@ let readyToFlip = (gameId)=>{
     }
     return true
 }
-let selectWinner = (gameId, cardId)=>{
-    let game = games[gameId]
-    let myPlayers = gamesInPlayers[gameId]
-    let topScore = 0;
-    for(let ind=0; ind<myPlayers.length; ind++){
-        let playerId = myPlayers[ind]
-        let player = players[playerId]
-
-        if(player.selections.includes(cardId)) player.score++
-        if(player.score > topScore) topScore = player.score
-        for(let sind=0; sind<player.selections.length; sind++){
-            let selectedId = player.selections[sind]
-            for(let hind=0; hind<player.hand.length; hind++){
-                let card = player.hand[hind]
-                if(card.id == selectedId){
-                    player.hand.splice(hind, 1)
-                    player.hand.push(game.whites.draw(1)[0])
-                }
-            }
-        }
-    }
-    if(topScore > 10) return true
-    else {
-        rotateCzar(gameId)
-        return false
-    }
-}
 let rotateCzar = (gameId) => {
     let game = games[gameId]
     let myPlayers = gamesInPlayers[gameId]
     let czarFound = false;
     let czarReplaced = false;
     for(let ind=0; ind<myPlayers.length; ind++){
+        let playerId = myPlayers[ind]
         if(czarFound && !czarReplaced){
             game.czar = playerId
             czarReplaced = true
@@ -160,8 +128,8 @@ let reportGame = (gameId, msg)=>{
         playerList.push(` - ${discordMember}: Selected: ${player.selections.length} Score: ${player.score}`)
     }
     let discordCzar = games[gameId].czar ? msg.guild.members.cache.get(games[gameId].czar) : "None"
-    let card = games[gameId].blackCard ? games[gameId].blackCard.text : "None"
-    return msg.reply(`**Game: ${gameId}**\n*Czar: ${discordCzar}*\nCard: ${card}\n${playerList.join('\n')}`)
+    let card = games[gameId].blackCard ? games[gameId].blackCard : "None"
+    return msg.channel.send(`**Game: ${gameId}**\n*Czar: ${discordCzar}*\nCard: ${card == "None" ? card : card.text}\nPick: ${card == "None" ? card : card.pick}\n${playerList.join('\n')}`)
 }
 let reportHand = (playerId) => {
     let myCards = []
@@ -172,16 +140,6 @@ let reportHand = (playerId) => {
     }
     return `**Your hand**:\n${myCards.join('\n')}`
 }
-
-//events
-//- open game
-//- join game
-//- begin game
-//- - deal
-//- leave game
-//- select card
-
-
 
 module.exports = {
     triggers: ['cah'],
@@ -213,36 +171,100 @@ module.exports = {
                     }
                     return reportGame(beginGameId, msg)
                 }
+                return msg.reply("Need at least 3 players.")
             case "play":
                 if(!playersInGames[msg.author.id]) return msg.reply("You would have to join a game first.")
                 let handIndex = arguments.shift()
                 let playOnPlayer = players[msg.author.id]
                 let playGameId = playersInGames[msg.author.id]
+                let myPlayPlayers = gamesInPlayers[playGameId]
                 let game = games[playGameId]
                 if(playOnPlayer.selections.length >= game.blackCard.pick) return msg.reply("You already have too many cards selected.")
-                playOnPlayer.selections.push(playOnPlayer.hand[handIndex].id)
-                return msg.reply(`Card **${handIndex}** selected.`)
-                break;
+                playOnPlayer.selections.push(handIndex)
+                msg.reply(`Card **${handIndex}** selected.`)
+                if(readyToFlip(playGameId)){
+                    let playerLines = []
+                    myPlayPlayers = shuffle(myPlayPlayers)
+                    for(let ind = 0; ind < myPlayPlayers.length; ind++){
+                        let flipPlayId = myPlayPlayers[ind]
+                        let flipPlayer = players[flipPlayId]
+                        let cardLines = []
+                        for(let find = 0; find < flipPlayer.selections.length; find++){
+                            cardLines.push(` - ${flipPlayer.hand[flipPlayer.selections[find]].text}`)
+                        }
+                        playerLines.push(`**${ind}**\n${cardLines.join('\n')}`)
+                    }
+                    msg.channel.send(`**The Flip**\n*${games[playGameId].blackCard.text}*\n${playerLines.join('\n')}`)
+                }
+                return;
+            case "select": 
+                if(!playersInGames[msg.author.id]) return msg.reply("You would have to join a game first.")
+                let selectGameId = playersInGames[msg.author.id]
+                let selectGame = games[selectGameId]
+                if(selectGame.czar != msg.author.id) return msg.reply("Only the Czar can select the winner.")
+                let selectIndex = arguments.shift()
+                if(!gamesInPlayers[selectGameId][selectIndex]) return msg.reply(`Not a valid selection: ${selectGameId}`)
+                let selectedPlayerId = gamesInPlayers[selectGameId][selectIndex];
+                players[selectedPlayerId].score++
+                let mySelectPlayers = gamesInPlayers[selectGameId]
+                if(players[selectedPlayerId].score >= 10){
+                    let discordSelectPlayer = msg.guild.members.cache.get(selectedPlayerId)
+                    msg.channel.send(`${discordSelectPlayer} has won game **${selectGameId}**!`)
+                    for(let ind=0; ind<mySelectPlayers.length; ind++){
+                        let mySelectPlayerId = mySelectPlayers[ind]
+                        leaveGame(mySelectPlayerId)
+                    }
+                    return
+                }
+                for(let ind=0; ind<mySelectPlayers.length; ind++){
+                    let mySelectPlayerId = mySelectPlayers[ind]
+                    let mySelectPlayer = players[mySelectPlayerId]
+                    for(let sind in mySelectPlayer.selections){
+                        let mySelectCard = mySelectPlayer.hand[sind]
+                        for(let hind =0; hind<mySelectPlayer.hand.length; hind++){
+                            let myInnerSelectCard = mySelectPlayer.hand[hind]
+                            if(mySelectCard.id == myInnerSelectCard.id){
+                                mySelectPlayer.hand.splice(hind, 1)
+                                selectGame.whites.draw(1)
+                                mySelectPlayer.hand.push(selectGame.whites.drawn[selectGame.whites.drawn.length-1])
+                            }
+                        }
+                    }
+                }
+                rotateCzar(selectGameId)
+                selectGame.blacks.draw(1)
+                selectGame.blackCard = selectGame.blacks.drawn[selectGame.blacks.drawn.length-1]
+                return reportGame(selectGameId, msg)
             case "leave":
                 if(!playersInGames[msg.author.id]) return msg.reply("You would have to join a game first.")
-                leaveGame(msg.author.id)
-                break;
+                return leaveGame(msg.author.id)
             case "games":
                 let gameLines = []
                 for(let gameId in games){
                     gameLines.push(` Game: **${gameId}**, Players: ${gamesInPlayers[gameId].length}`)
                 }
-                msg.reply(`**Game Report**\n${gameLines.join('\n')}`)
-                break;
+                return msg.channel.send(`**Game Report**\n${gameLines.join('\n')}`)
             case "game":
                 let gameId = arguments.shift()
                 if(!games[gameId]) return msg.reply(`Couldn't find game **${gameId}**`)
                 return reportGame(gameId, msg)
             case "hand":
-                msg.author.send(reportHand(msg.author.id))
-                break;
+                return msg.author.send(reportHand(msg.author.id))
             default: 
                 return msg.reply(`Valid commands are: create, join, play, leave, games, players, hand, and score.`)
         }
     }
+}
+
+const shuffle = (array)=>{
+    let curind = array.length;
+    let tempVal, randInd;
+    while(0!==curind){
+        randInd = Math.floor(Math.random()*curind);
+        curind -= 1;
+        tempVal = array[curind]
+        array[curind] = array[randInd]
+        array[randInd] = tempVal
+    }
+    return array
 }
