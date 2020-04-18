@@ -12,7 +12,7 @@ for(let ind=0; ind<controllers.length; ind++){
   let controllerFileName = controllers[ind];
   let controller = require(path.join(__dirname, 'controllers', controllerFileName));
   controllerObjs.push(controller)
-  console.log('Registering Controller', controllerFileName, `Triggers: ${controller.triggers.join(' ')}`)
+  console.log('Registering Controller', controllerFileName, `Triggers: ${controller.triggers.join(', ')}`)
   for(let cind=0; cind<controller.triggers.length; cind++){
     controllerMap[controller.triggers[cind]] = controllerObjs[controllerObjs.length-1];
   }
@@ -34,7 +34,7 @@ client.on('message', msg => {
   let firstMention = msg.mentions.users.first();
   if(!firstMention || !firstMention.tag) return;
   if(firstMention.tag == myTag){
-    content = content.replace(`<@!${firstMention.id}>`, "").trim();
+    content = content.replace(`<@!${firstMention.id}>`, "").replace(`<@&${firstMention.id}>`, "").replace(`<@${firstMention.id}>`, "").trim();
     let arguments = content.split(' ');
     let controllerTrigger = arguments.shift();
     if(controllerMap[controllerTrigger]){

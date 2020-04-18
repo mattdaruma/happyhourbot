@@ -76,6 +76,7 @@ let readyToFlip = (gameId)=>{
     for(let ind=0; ind<myPlayers.length; ind++){
         let playerId = myPlayers[ind]
         let player = players[playerId]
+        if(playerId == game.czar) continue
         if(player.selections.length < game.blackCard.pick) return false
     }
     return true
@@ -154,7 +155,7 @@ module.exports = {
                 return reportGame(createGameId, msg)
             case "join":
                 if(playersInGames[msg.author.id]) return msg.reply("You would have to leave your current game first.")
-                let joinGameId = playersInGames[msg.author.id]
+                let joinGameId = arguments.shift()
                 if(!games[joinGameId]) return msg.reply(`There is no such game: ${joinGameId}`)
                 joinGame(msg.author.id, joinGameId)
                 return reportGame(joinGameId, msg)
@@ -162,7 +163,7 @@ module.exports = {
                 if(!playersInGames[msg.author.id]) return msg.reply("You would have to join a game first.")
                 let beginGameId = playersInGames[msg.author.id]
                 let myPlayers = gamesInPlayers[beginGameId]
-                if(myPlayers.length >= 3) {
+                if(myPlayers.length >= 2) {
                     beginGame(beginGameId)
                     for(let ind=0; ind<myPlayers.length; ind++){
                         let playerId = myPlayers[ind]
@@ -179,6 +180,7 @@ module.exports = {
                 let playGameId = playersInGames[msg.author.id]
                 let myPlayPlayers = gamesInPlayers[playGameId]
                 let game = games[playGameId]
+                if(game.czar == msg.author.id) return msg.reply("The czar may not play in their own game.")
                 if(playOnPlayer.selections.length >= game.blackCard.pick) return msg.reply("You already have too many cards selected.")
                 playOnPlayer.selections.push(handIndex)
                 msg.reply(`Card **${handIndex}** selected.`)
@@ -219,6 +221,7 @@ module.exports = {
                 for(let ind=0; ind<mySelectPlayers.length; ind++){
                     let mySelectPlayerId = mySelectPlayers[ind]
                     let mySelectPlayer = players[mySelectPlayerId]
+                    let mySelectDiscordPlayer = msg.guild.members.cache.get(mySelectPlayerId)
                     for(let sind in mySelectPlayer.selections){
                         let mySelectCard = mySelectPlayer.hand[sind]
                         for(let hind =0; hind<mySelectPlayer.hand.length; hind++){
@@ -226,10 +229,13 @@ module.exports = {
                             if(mySelectCard.id == myInnerSelectCard.id){
                                 mySelectPlayer.hand.splice(hind, 1)
                                 selectGame.whites.draw(1)
-                                mySelectPlayer.hand.push(selectGame.whites.drawn[selectGame.whites.drawn.length-1])
+                                let mySelectNewCard = selectGame.whites.drawn[selectGame.whites.drawn.length-1]
+                                mySelectPlayer.hand.push(mySelectNewCard)
                             }
                         }
                     }
+                    mySelectPlayer.selections = []
+                    mySelectDiscordPlayer.send(reportHand(mySelectPlayerId))
                 }
                 rotateCzar(selectGameId)
                 selectGame.blacks.draw(1)
