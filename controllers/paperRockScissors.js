@@ -6,9 +6,9 @@ function getRandomInt(min, max) {
 const responses = ["Paper", "Rock", "Scissors"]
 
 module.exports = {
-    command: 'prs',
+    triggers: ['prs', 'rps'],
     onMessage: (msg, arguments) => {
-        let paperRockScissors = arguments[0];
+        let paperRockScissors = arguments.shift();
         let myRoll = responses[getRandomInt(0, 2)];
         if (paperRockScissors.includes('pap')) {
             let victory = myRoll == "Scissors";

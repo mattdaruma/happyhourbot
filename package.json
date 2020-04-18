@@ -1,7 +1,7 @@
 {
   "name": "happyhourbot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Bot for happy hour Discord",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,6 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "deckbuilder": "^1.1.0",
     "discord.js": "^12.1.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattdaruma/happyhourbot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mattdaruma/happyhourbot/issues"
+  },
+  "homepage": "https://github.com/mattdaruma/happyhourbot#readme"
 }
